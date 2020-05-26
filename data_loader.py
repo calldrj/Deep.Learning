@@ -4,7 +4,7 @@ import numpy as np
 # Function load raw dataset
 def load_dataset():
     # Read data drom  source, just read once!!!
-    #urllib.request.urlretrieve("http://deeplearning.net/data/mnist/mnist.pkl.gz", "./data/mnist.pkl.gz")
+    # urllib.request.urlretrieve("http://deeplearning.net/data/mnist/mnist.pkl.gz", "./data/mnist.pkl.gz")
     file = gzip.open('./data/mnist.pkl.gz', 'rb')
     train_data, val_data, test_data = pickle.load(file, encoding='latin1')
     file.close()
