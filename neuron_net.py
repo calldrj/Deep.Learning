@@ -1,6 +1,9 @@
 import numpy as np
+import random
 
 class DeepNet(object):
+    # Object is a list of input size, number of neurons in the kth layer, ..., and output size
+    # For example, net = neuron_net.DeepNet([784, 30, 10])
     # yi = Wi * xi + bi
     def __init__(self, sizes):
         # Number of layers in the network
@@ -12,25 +15,13 @@ class DeepNet(object):
         # Populate Gaussian random of weight matrix, layer by layer
         self.Ws = [ np.random.rand(r, c) for r, c in zip(sizes[1:], sizes[:-1]) ]
     
-    # Function computes the sigmoid neutron
-        # Input: weighted input vector of a layer
-        # Output: normalized value of weighted input vector of the same layer
-    def sigma(z):
-        return 1.0 / (1 + np.exp(-z))
-    
-    # Function computes the derivative of sigmoid neutron
-        # Input: sigmoid neutron z (normalized )
-        # Output: rate of change in sigmoid neutron z
-    def sigma_rate(self, z):
-        return sigma(z) * (1 - sigma(z))
-    
-    # Function computes the fordward activation of a layer:
-        # Input: activation vector a of a current layer
-        # Output: activation vector for the next layer (forward activation)    
+    # Function computes the output of the network, given an input:
+        # Input:  an input array a of the first layer (size arbitrarily nx1)
+        # Output: an out array of the network (size arbitrarily mx1)   
     def feedforward(self, a):
         for b, W in zip(self.bs, self.Ws):
-            # Compute weighted input
-            a = sigma(np.dot(W, a) + b)
+            # Compute weighted input for every layer, Numpy applied sigmoid() elementwise
+            a = sigmoid(np.dot(W, a) + b)
         return a
    
     # Function backpropagation
@@ -54,16 +45,17 @@ class DeepNet(object):
             z = np.dot(W, a) + b
             zs.append(z)
             # Compute the forward activation a, layer by layer, then save in activations
-            a = sigma(z)
+            a = sigmoid(z)
             activations.append(a)
         
         # Back propagation
-        delta = (activations[-1] - y) * sigma_rate(zs[-1])
-        gd_bs[-1], gd_Ws[-1]= delta, np.dot(delta, activations[-2].transposes())
+        delta = self.cost_derivative(activations[-1], y) * sigmoid_rate(zs[-1])
+        gd_bs[-1], gd_Ws[-1]= delta, np.dot(delta, activations[-2].transpose())
         for k in range(2, self.num_layers):
-            z, s = zs[-k], sigma_rate(z)
+            z =  zs[-k]
+            s = sigmoid_rate(z)
             delta = np.dot(self.Ws[-k + 1].transpose(), delta) * s
-            gd_bs[-k], gd_Ws[-k] = delta, np.dot(delta, activations[-k - 1].transposes())
+            gd_bs[-k], gd_Ws[-k] = delta, np.dot(delta, activations[-k - 1].transpose())
         
         return (gd_bs, gd_Ws)
         
@@ -71,8 +63,8 @@ class DeepNet(object):
         # Input: test data in tuple of (x, y) 
         # Output: number of correct predictions
     def evaluate(self, test):
-        results = [ (np.argmax(self.forwardfeed(x)), y) for (x, y) in test ]
-        return sum(int(y0 == y1) for (y0, y1) in results)
+        results = [ (np.argmax(self.feedforward(x)), y_expected) for (x, y_expected) in test ]
+        return sum(int(y_predicted == y_expected) for (y_predicted, y_expected) in results)
     
     # Function update bias vectors and weight matrices, layer by layer 
         # Input: a batch of mini samples mini_batch, and learning rate eta
@@ -85,10 +77,10 @@ class DeepNet(object):
         # Populate vectors in gd_bs with 0 layer by layer
         gd_bs = [ np.zeros(b.shape) for b in self.bs ]
         # Populate matrices in gd_Ws with 0 layer by layer
-        gd_WS = [ np.zeros(W.shape) for W in self.Ws ]
+        gd_Ws = [ np.zeros(W.shape) for W in self.Ws ]
         for x, y in mini_batch:
             # Compute delta bias bs and delta weights Ws
-            dt_bs, dt_Ws = backpropagation(x, y)
+            dt_bs, dt_Ws = self.backpropagation(x, y)
             # Update vectors of gradient in bias for the loss function
             gd_bs = [ gd_b + dt_b for gd_b, dt_b in zip(gd_bs, dt_bs) ]
             # Update matrices of gradient in weight for the loss function
@@ -104,15 +96,37 @@ class DeepNet(object):
     # optional testing dataset
     # Output: None, just print out the training progress per every epoch
     def SGD(self, train_dataset, epochs, batch_size, eta, test_dataset=None):
+        train_dataset = list(train_dataset)
+        l = len(train_dataset)
+        if test_dataset:
+            test_dataset = list(test_dataset)
+            n = len(test_dataset)
+        # Run SGD algorithms in each epoch
         for k in range(epochs):
-            np.random.shuffle(train_dataset)     # randomize samples in training data
-            batch = [ train_dataset[ k : batch_size ]
-                      for k in range(0, len(train_dataset), batch_size) ]
+            # Shuffle samples in training data, then partition it in given batch size
+            random.shuffle(train_dataset)     
+            batch = [ train_dataset[ j : j + batch_size ] for j in range(0, l, batch_size) ]
+            # Run SGD algorithm in each sample of the partition
             for sample in batch:
                 self.update_params(sample, eta)
             if test_dataset:
-                print ("Epoch {0}: {1} / {2} ...".format(k, 
-                                                         self.evaluate(test_dataset), 
-                                                         len(test_dataset)))
+                print ("Epoch {}:\t {} / {} ...".format(k + 1, self.evaluate(test_dataset), n))
             else:
-                print ("Epoch {0} complete ...".format(k))
+                print ("Epoch {} complete ...".format(k))
+    
+    def cost_derivative(self, output_activations, y):
+        """Return the vector of partial derivatives \partial C_x /
+        \partial a for the output activations."""
+        return (output_activations - y)
+
+# Function computes the sigmoid neutron
+    # Input: weighted input vector of a layer z
+    # Output: normalized value of weighted input vector of the same layer
+def sigmoid(z):
+    return 1.0 / (1 + np.exp(-z))
+    
+# Function computes the derivative of sigmoid neutron
+    # Input: sigmoid neutron z (normalized )
+    # Output: rate of change in sigmoid neutron z
+def sigmoid_rate(z):
+    return sigmoid(z) * (1 - sigmoid(z))
