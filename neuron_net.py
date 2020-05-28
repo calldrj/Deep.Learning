@@ -4,16 +4,16 @@ import random
 class DeepNet(object):
     # Object is a list of input size, number of neurons in the kth layer, ..., and output size
     # For example, net = neuron_net.DeepNet([784, 30, 10])
-    # yi = Wi * xi + bi
+    # y = W * x + b
     def __init__(self, sizes):
         # Number of layers in the network
         self.num_layers = len(sizes)
         # Number of neuron in the network
         self.num_neuron = sizes
-        # Populate Gaussian random of bias vectors, layer by layer
-        self.bs = [ np.random.rand(r, 1) for r in sizes[1:] ]
-        # Populate Gaussian random of weight matrix, layer by layer
-        self.Ws = [ np.random.rand(r, c) for r, c in zip(sizes[1:], sizes[:-1]) ]
+        # Populate Gaussian random on a list of bias vectors, each layer is represented by a vector b
+        self.bs = [ np.random.randn(r, 1) for r in sizes[1:] ]
+        # Populate Gaussian random on a list of weight matrices, each matrix is repesented by a matrix M
+        self.Ws = [ np.random.randn(r, c) for r, c in zip(sizes[1:], sizes[:-1]) ]
     
     # Function computes the output of the network, given an input:
         # Input:  an input array a of the first layer (size arbitrarily nx1)
@@ -23,6 +23,13 @@ class DeepNet(object):
             # Compute weighted input for every layer, Numpy applied sigmoid() elementwise
             a = sigmoid(np.dot(W, a) + b)
         return a
+
+     # Function evaluate:
+        # Input: test data in tuple of (x, y) 
+        # Output: number of correct predictions
+    def evaluate(self, test):
+        results = [ (np.argmax(self.feedforward(x)) == y) for (x, y) in test ]
+        return sum(results)
    
     # Function backpropagation
         # Input: a data sample x, y
@@ -30,9 +37,9 @@ class DeepNet(object):
         # gd_bs, with same dimension to bs', is list of bias vectors, layer by layer
         # gd_Ws, with same dimension to Ws', is list of weight matrices, layer by layer
     def backpropagation(self, x, y):
-        # Populate vectors in gd_bs with 0 layer by layer
+        # Populate list of vectors gd_bs each with vector 0, layer by layer
         gd_bs = [ np.zeros(b.shape) for b in self.bs ]
-        # Populate matrices in gd_Ws with 0 layer by layer
+        # Populate list of matrices gd_Ws each with matrix 0, layer by layer
         gd_Ws = [ np.zeros(W.shape) for W in self.Ws ]
         
         # Feedforward
@@ -49,34 +56,27 @@ class DeepNet(object):
             activations.append(a)
         
         # Back propagation
-        delta = self.cost_derivative(activations[-1], y) * sigmoid_rate(zs[-1])
-        gd_bs[-1], gd_Ws[-1]= delta, np.dot(delta, activations[-2].transpose())
+        delta = (activations[-1] - y) * sigmoid_rate(zs[-1])
+        gd_bs[-1], gd_Ws[-1] = delta, np.dot(delta, activations[-2].transpose())
         for k in range(2, self.num_layers):
-            z =  zs[-k]
+            z = zs[-k]
             s = sigmoid_rate(z)
             delta = np.dot(self.Ws[-k + 1].transpose(), delta) * s
             gd_bs[-k], gd_Ws[-k] = delta, np.dot(delta, activations[-k - 1].transpose())
         
         return (gd_bs, gd_Ws)
-        
-    # Function evaluate:
-        # Input: test data in tuple of (x, y) 
-        # Output: number of correct predictions
-    def evaluate(self, test):
-        results = [ (np.argmax(self.feedforward(x)), y_expected) for (x, y_expected) in test ]
-        return sum(int(y_predicted == y_expected) for (y_predicted, y_expected) in results)
-    
+         
     # Function update bias vectors and weight matrices, layer by layer 
-        # Input: a batch of mini samples mini_batch, and learning rate eta
+        # Input: a batch of samples mini_batch, and learning rate eta
         # Output: None, just update the network's bias vectors bs and the weight matrix Ws,
         # layer by layer using gradient descent and backpropagation algorithm 
         # applied to the mini batch with following formulars:
         # new W = current W - eta * change in loss function per change in weight
         # new b = current b - eta * change in loss function per change in weight
     def update_params(self, mini_batch, eta):
-        # Populate vectors in gd_bs with 0 layer by layer
+        # Populate list of vectors gd_bs each with vector 0, layer by layer
         gd_bs = [ np.zeros(b.shape) for b in self.bs ]
-        # Populate matrices in gd_Ws with 0 layer by layer
+        # Populate list of matrices gd_Ws each with matrix 0, layer by layer
         gd_Ws = [ np.zeros(W.shape) for W in self.Ws ]
         for x, y in mini_batch:
             # Compute delta bias bs and delta weights Ws
@@ -86,9 +86,9 @@ class DeepNet(object):
             # Update matrices of gradient in weight for the loss function
             gd_Ws = [ gd_W + dt_W for gd_W, dt_W in zip(gd_Ws, dt_Ws) ]
         
-        # Update bias vectors in the network, layer by layer
+        # Update list of bias vectors in the network, layer by layer
         self.bs = [ b - (eta / len(mini_batch)) * gd_b for b, gd_b in zip(self.bs, gd_bs) ]
-        # Update weight matrices in the network, layer by layer
+        # Update list of weight matrices in the network, layer by layer
         self.Ws = [ W - (eta / len(mini_batch)) * gd_W for W, gd_W in zip(self.Ws, gd_Ws) ]
     
     # Function Stochastic Gradient Descent (SGD)
@@ -96,8 +96,10 @@ class DeepNet(object):
     # optional testing dataset
     # Output: None, just print out the training progress per every epoch
     def SGD(self, train_dataset, epochs, batch_size, eta, test_dataset=None):
+        # Unzip train_dataset 
         train_dataset = list(train_dataset)
         l = len(train_dataset)
+        # Process test dataset if it is input
         if test_dataset:
             test_dataset = list(test_dataset)
             n = len(test_dataset)
@@ -105,28 +107,25 @@ class DeepNet(object):
         for k in range(epochs):
             # Shuffle samples in training data, then partition it in given batch size
             random.shuffle(train_dataset)     
-            batch = [ train_dataset[ j : j + batch_size ] for j in range(0, l, batch_size) ]
+            batches = [ train_dataset[ j : j + batch_size ] for j in range(0, l, batch_size) ]
             # Run SGD algorithm in each sample of the partition
-            for sample in batch:
-                self.update_params(sample, eta)
+            for mini_batch in batches:
+                self.update_params(mini_batch, eta)
             if test_dataset:
-                print ("Epoch {}:\t {} / {} ...".format(k + 1, self.evaluate(test_dataset), n))
+                print("Epoch #{}:\t{} / {} ...".format(k + 1, self.evaluate(test_dataset), n))
             else:
-                print ("Epoch {} complete ...".format(k))
-    
-    def cost_derivative(self, output_activations, y):
-        """Return the vector of partial derivatives \partial C_x /
-        \partial a for the output activations."""
-        return (output_activations - y)
+                print("Epoch #{}\tcomplete ...".format(k + 1))
+        
+        print("Training complete!")
 
 # Function computes the sigmoid neutron
     # Input: weighted input vector of a layer z
     # Output: normalized value of weighted input vector of the same layer
 def sigmoid(z):
-    return 1.0 / (1 + np.exp(-z))
+    return 1.0 / (1.0 + np.exp(-z))
     
 # Function computes the derivative of sigmoid neutron
     # Input: sigmoid neutron z (normalized )
     # Output: rate of change in sigmoid neutron z
 def sigmoid_rate(z):
-    return sigmoid(z) * (1 - sigmoid(z))
+    return sigmoid(z) * (1.0 - sigmoid(z))
