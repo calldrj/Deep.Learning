@@ -28,8 +28,10 @@ class DeepNet(object):
         # Input: test data in tuple of (x, y) 
         # Output: number of correct predictions
     def evaluate(self, test):
-        results = [ (np.argmax(self.feedforward(x)) == y) for (x, y) in test ]
-        return sum(results)
+        c = 0
+        for (x, y) in test:
+            c += (int)(np.argmax(self.feedforward(x)) == y) 
+        return c
    
     # Function backpropagation
         # Input: a data sample x, y
