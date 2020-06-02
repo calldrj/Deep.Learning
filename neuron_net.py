@@ -30,7 +30,7 @@ class DeepNet(object):
         # Output: a tuple of (gd_bs, gd_Ws) representing the gradient for the loss function
         # gd_bs, with same dimension to bs', is list of bias vectors, layer by layer
         # gd_Ws, with same dimension to Ws', is list of weight matrices, layer by layer
-    def backpropagation(self, x, y):
+    def backpropagation(self, x, y, loss_type):
         # Populate list of vectors gd_bs each with vector 0, layer by layer
         gd_bs = [ np.zeros(b.shape) for b in self.bs ]
         # Populate list of matrices gd_Ws each with matrix 0, layer by layer
@@ -50,8 +50,12 @@ class DeepNet(object):
             activations.append(a)
         
         # Back propagation
-        # The loss function for the algorithm is applied in delta
-        delta = (activations[-1] - y) * sigmoid_rate(zs[-1])
+        # The loss function for the algorithm is applied in delta, 
+        # depending on loss type of Mean Squared Error (MSE, default method), or Cross-Entropy (CE)
+        if (loss_type == "CE"):
+            delta = activations[-1] - y
+        else:
+            delta = (activations[-1] - y) * sigmoid_rate(zs[-1])
         gd_bs[-1], gd_Ws[-1] = delta, np.dot(delta, activations[-2].transpose())
         for k in range(2, self.num_layers):
             z = zs[-k]
@@ -68,14 +72,14 @@ class DeepNet(object):
         # applied to the mini batch with following formulars:
         # new W = current W - eta * change in loss function per change in weight
         # new b = current b - eta * change in loss function per change in weight
-    def update_params(self, mini_batch, eta):
+    def update_params(self, mini_batch, eta, loss_type):
         # Populate list of vectors gd_bs each with vector 0, layer by layer
         gd_bs = [ np.zeros(b.shape) for b in self.bs ]
         # Populate list of matrices gd_Ws each with matrix 0, layer by layer
         gd_Ws = [ np.zeros(W.shape) for W in self.Ws ]
         for x, y in mini_batch:
             # Compute delta bias bs and delta weights Ws
-            dt_bs, dt_Ws = self.backpropagation(x, y)
+            dt_bs, dt_Ws = self.backpropagation(x, y, loss_type)
             # Update vectors of gradient in bias for the loss function
             gd_bs = [ gd_b + dt_b for gd_b, dt_b in zip(gd_bs, dt_bs) ]
             # Update matrices of gradient in weight for the loss function
@@ -90,7 +94,7 @@ class DeepNet(object):
         # Input:  training dataset, number of epochs, size of mini batch, learning rate, 
         #         and optional testing dataset
         # Output: None, just print out the training progress per every epoch
-    def SGD(self, train_dataset, epochs, batch_size, eta, lamb, test_dataset):
+    def SGD(self, train_dataset, epochs, batch_size, eta, lamb, loss_type, test_dataset):
         l = len(train_dataset)
         # Process test dataset if it is input
         if test_dataset:
@@ -105,9 +109,9 @@ class DeepNet(object):
             batches = [ train_dataset[ j : j + batch_size ] for j in range(0, l, batch_size) ]
             # Run SGD algorithm in each sample of the partition
             for mini_batch in batches:
-                self.update_params(mini_batch, eta)
-            loss_train.append(self.loss(train_dataset, lamb))
-            loss_valid.append(self.loss(test_dataset, lamb, training_set=False))
+                self.update_params(mini_batch, eta, loss_type)
+            loss_train.append(self.loss(train_dataset, lamb, loss_type ))
+            loss_valid.append(self.loss(test_dataset, lamb, loss_type, training_set=False))
             accu_train.append(self.evaluate(train_dataset))
             accu_valid.append(self.evaluate(test_dataset, training_set=False))
             print("Epoch #{}:\n\t\t>> Training:\n\t\t\tLoss = {}\tAccuracy = {} \
@@ -115,18 +119,23 @@ class DeepNet(object):
                   .format(k + 1, loss_train[-1], accu_train[-1], loss_valid[-1], accu_valid[-1]))
 
         print("Training complete!")
+        return (loss_train, loss_valid, accu_train, accu_valid)
     
     # Function computes the loss of a network
     # Input:  dataset, regulation factor lamb, boolean flag indicating 
     # if the dataset is a training/validation or testing dataset
     # Output: the loss value associated with that dataset
-    def loss(self, dataset, lamb, training_set=True):
+    def loss(self, dataset, lamb, loss_type, training_set=True):
         l = len(dataset)
         loss = 0.5 * lamb * sum(lin.norm(W)**2 for W in self.Ws) / l
         for (x, y) in dataset:
             if (not(training_set)):
                 y = vector_y(y)
-            loss += 0.5 * lin.norm(y - self.feedforward(x))**2 / l             
+            a = self.feedforward(x)
+            if (loss_type == "CE"):
+                loss = np.sum(np.nan_to_num(-y * np.log(a)- (1 - y) * np.log(1 - a))) / l
+            else:
+                loss += 0.5 * lin.norm(y - a)**2 / l             
         return loss
     
     # Function evaluate:
