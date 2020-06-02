@@ -1,5 +1,6 @@
 import numpy as np
 import random
+from numpy import linalg as lin 
 
 class DeepNet(object):
     # Object is a list of input size, number of neurons in the kth layer, ..., and output size
@@ -24,17 +25,8 @@ class DeepNet(object):
             a = sigmoid(np.dot(W, a) + b)
         return a
 
-     # Function evaluate:
-        # Input: test data in tuple of (x, y) 
-        # Output: number of correct predictions
-    def evaluate(self, test):
-        c = 0
-        for (x, y) in test:
-            c += (int)(np.argmax(self.feedforward(x)) == y) 
-        return c
-   
     # Function backpropagation
-        # Input: a data sample x, y
+        # Input:  a data sample x, y
         # Output: a tuple of (gd_bs, gd_Ws) representing the gradient for the loss function
         # gd_bs, with same dimension to bs', is list of bias vectors, layer by layer
         # gd_Ws, with same dimension to Ws', is list of weight matrices, layer by layer
@@ -69,7 +61,7 @@ class DeepNet(object):
         return (gd_bs, gd_Ws)
          
     # Function update bias vectors and weight matrices, layer by layer 
-        # Input: a batch of samples mini_batch, and learning rate eta
+        # Input:  a batch of samples mini_batch, and learning rate eta
         # Output: None, just update the network's bias vectors bs and the weight matrix Ws,
         # layer by layer using gradient descent and backpropagation algorithm 
         # applied to the mini batch with following formulars:
@@ -94,17 +86,18 @@ class DeepNet(object):
         self.Ws = [ W - (eta / len(mini_batch)) * gd_W for W, gd_W in zip(self.Ws, gd_Ws) ]
     
     # Function Stochastic Gradient Descent (SGD)
-    # Input: training dataset, number of epochs, size of mini batch, learning rate, 
-    # optional testing dataset
-    # Output: None, just print out the training progress per every epoch
-    def SGD(self, train_dataset, epochs, batch_size, eta, test_dataset=None):
+        # Input:  training dataset, number of epochs, size of mini batch, learning rate, 
+        #         and optional testing dataset
+        # Output: None, just print out the training progress per every epoch
+    def SGD(self, train_dataset, epochs, batch_size, eta, lamb, test_dataset):
         # Unzip train_dataset 
-        train_dataset = list(train_dataset)
         l = len(train_dataset)
         # Process test dataset if it is input
         if test_dataset:
-            test_dataset = list(test_dataset)
             n = len(test_dataset)
+        # Initialize the loss lists
+        loss_train, loss_valid = [], []
+        accu_train, accu_valid = [], []
         # Run SGD algorithms in each epoch
         for k in range(epochs):
             # Shuffle samples in training data, then partition it in given batch size
@@ -113,21 +106,57 @@ class DeepNet(object):
             # Run SGD algorithm in each sample of the partition
             for mini_batch in batches:
                 self.update_params(mini_batch, eta)
-            if test_dataset:
-                print("Epoch #{}:\t{} / {} ...".format(k + 1, self.evaluate(test_dataset), n))
-            else:
-                print("Epoch #{}\tcomplete ...".format(k + 1))
-        
+            loss_train.append(self.loss(train_dataset, lamb))
+            loss_valid.append(self.loss(test_dataset, lamb, training_set=False))
+            accu_train.append(self.evaluate(train_dataset))
+            accu_valid.append(self.evaluate(test_dataset, training_set=False))
+            print("Epoch #{}:\n\t\t>> Training:\n\t\t\tLoss = {}\tAccuracy = {} \
+                             \n\t\t>> Evaluation:\n\t\t\tLoss = {}\tAccuracy = {} ..."
+                  .format(k + 1, loss_train[-1], accu_train[-1], loss_valid[-1], accu_valid[-1]))
+
         print("Training complete!")
+    
+    # Function computes the loss of a network
+    # Input:  dataset, regulation factor lamb, boolean flag indicating 
+    # if the dataset is a training/validation or testing dataset
+    # Output: the loss value associated with that dataset
+    def loss(self, dataset, lamb, training_set=True):
+        l = len(dataset)
+        loss = 0.0
+        for (x, y) in dataset:
+            if (not(training_set)):
+                y = vector_y(y)
+            loss += 0.5 * lin.norm(y - self.feedforward(x))**2 / l + \
+                    0.5 * lamb * sum(lin.norm(W)**2 for W in self.Ws) / l
+        return loss
+    
+    # Function evaluate:
+        # Input:  dataset in tuple of (x, y) 
+        # Output: number of correct predictions
+    def evaluate(self, dataset, training_set=True):
+        c = 0
+        for (x, y) in dataset:
+            if (training_set):
+                i = np.argmax(y)
+            else:
+                i = y
+            c += (int)(np.argmax(self.feedforward(x)) == i)
+        return c / len(dataset)
 
 # Function computes the sigmoid neutron
-    # Input: weighted input vector of a layer z
+    # Input:  weighted input vector of a layer z
     # Output: normalized value of weighted input vector of the same layer
 def sigmoid(z):
     return 1.0 / (1.0 + np.exp(-z))
     
 # Function computes the derivative of sigmoid neutron
-    # Input: sigmoid neutron z (normalized )
+    # Input:  sigmoid neutron z (normalized )
     # Output: rate of change in sigmoid neutron z
 def sigmoid_rate(z):
     return sigmoid(z) * (1.0 - sigmoid(z))
+
+# Function vectorize ouput y in training dataset
+def vector_y(k):
+    y = np.zeros((10, 1))
+    y[k] = 1.0
+    return y
