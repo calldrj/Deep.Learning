@@ -1,11 +1,11 @@
 import sys
 sys.path.append('./data')
-import quadratic_network
+import neuron_net
 import data_loader
 # Load datasets
 training_data, validation_data, test_data = data_loader.wrap_data()
 # Create and configure a network
-net = quadratic_network.DeepNet([784, 30, 10])
+net = neuron_net.DeepNet([784, 30, 10])
 # Train the network with hyper-parameters
 num_epochs = 30
 batch_size = 10
