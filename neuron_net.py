@@ -50,6 +50,7 @@ class DeepNet(object):
             activations.append(a)
         
         # Back propagation
+        # The loss function for the algorithm is applied in delta
         delta = (activations[-1] - y) * sigmoid_rate(zs[-1])
         gd_bs[-1], gd_Ws[-1] = delta, np.dot(delta, activations[-2].transpose())
         for k in range(2, self.num_layers):
@@ -90,7 +91,6 @@ class DeepNet(object):
         #         and optional testing dataset
         # Output: None, just print out the training progress per every epoch
     def SGD(self, train_dataset, epochs, batch_size, eta, lamb, test_dataset):
-        # Unzip train_dataset 
         l = len(train_dataset)
         # Process test dataset if it is input
         if test_dataset:
@@ -122,12 +122,11 @@ class DeepNet(object):
     # Output: the loss value associated with that dataset
     def loss(self, dataset, lamb, training_set=True):
         l = len(dataset)
-        loss = 0.0
+        loss = 0.5 * lamb * sum(lin.norm(W)**2 for W in self.Ws) / l
         for (x, y) in dataset:
             if (not(training_set)):
                 y = vector_y(y)
-            loss += 0.5 * lin.norm(y - self.feedforward(x))**2 / l + \
-                    0.5 * lamb * sum(lin.norm(W)**2 for W in self.Ws) / l
+            loss += 0.5 * lin.norm(y - self.feedforward(x))**2 / l             
         return loss
     
     # Function evaluate:
@@ -159,4 +158,4 @@ def sigmoid_rate(z):
 def vector_y(k):
     y = np.zeros((10, 1))
     y[k] = 1.0
-    return y
+    return y 
