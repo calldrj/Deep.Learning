@@ -35,7 +35,7 @@ def wrap_data():
     # Create testing dataset
     test_x = [ np.reshape(x, (784, 1)) for x in test_set[0] ]
     test_dataset = zip(test_x, test_set[1])
-    return (train_dataset, val_dataset, test_dataset)
+    return (list(train_dataset), list(val_dataset), list(test_dataset))
 
 # Transform the raw datasets to csv format
 def trans_csv():
