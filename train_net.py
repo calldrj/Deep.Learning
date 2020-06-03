@@ -2,6 +2,8 @@ import sys
 import os
 import json
 import numpy as np
+import pandas as pd
+
 sys.path.append('./data')
 
 file_path = "./"
@@ -15,7 +17,7 @@ training_data, validation_data, test_data = data_loader.wrap_data()
 # Create and configure a network
 net = neuron_net.DeepNet([784, 30, 10])
 # Train the network with hyper-parameters
-num_epochs = 400
+num_epochs = 40
 batch_size = 10
 learning_rate = 0.5
 regulation_factor = 0.01
@@ -26,10 +28,11 @@ loss_train, loss_validation, \
 accuracy_train, accuracy_validation = net.SGD(training_data, num_epochs, batch_size, 
                                               learning_rate, regulation_factor, 
                                               loss_type[1], test_dataset=validation_data)
-
-partitions = [ ("loss_train", loss_train), ("loss_validation", loss_validation ), 
-               ("accuracy_train", accuracy_train ), ("accuracy_validation", accuracy_validation) ]
-for filename, partition in partitions:
-    # Save datasets in csv format
-    print("Saving {} in {}".format(filename, file_path))
-    np.savetxt("{}{}.csv".format(file_path, filename), partition, delimiter=',')
+# Create a data frame to save the loss and accuracy data
+df = pd.DataFrame({ "epoch":                np.arange(1, num_epochs + 1, 1),
+                    "loss_train":           loss_train, 
+                    "loss_validation":      loss_validation, 
+                    "accuracy_train":       accuracy_train , 
+                    "accuracy_validation":  accuracy_validation })
+# Write the data frame in local drive
+df.to_csv("{}neuron_net.csv".format(file_path), sep=',', index=False)
