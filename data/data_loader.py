@@ -1,5 +1,6 @@
 import pickle, gzip, urllib.request
 import numpy as np
+import random
 import os
 
 file_path = "./"
@@ -54,3 +55,18 @@ def trans_csv():
         np.savetxt("{}{}.csv".format(file_path, name), samples, delimiter=',')
     
     print("Process complete!")
+
+# Generate synthetic dataset
+# Input:  vector of weights with size 1xm for features
+#         scalar value for  bias,
+#         number of samples of the dataset
+#         scalar value for noise variance
+# Output: an matrix of feature X, and a vector of target y such that y = Xw + b + noise   
+def synthetic_data(weights, bias, num_samples, noise_variance):
+    # Generate a matrix (n, m) of values with normal distribution (0, 1)
+    X = np.random.normal(0, 1, (num_samples, len(weights)))
+    # Compute vector y = Xw + b
+    y = np.dot(X, weights) +  bias
+    # Add noise with given variance
+    y += np.random.normal(0, noise_variance, y.shape)
+    return X, y
