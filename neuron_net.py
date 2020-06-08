@@ -51,7 +51,7 @@ class DeepNet(object):
         
         # Back propagation
         # The loss function for the algorithm is applied in delta, 
-        # depending on loss type of Mean Squared Error (MSE, default method), or Cross-Entropy (CE)
+        # depending on loss type of Mean Squared error (MS, default method), or Cross-Entropy (CE)
         if (loss_type == "CE"):
             delta = activations[-1] - y
         else:
@@ -95,10 +95,7 @@ class DeepNet(object):
         #         and optional testing dataset
         # Output: None, just print out the training progress per every epoch
     def SGD(self, train_dataset, epochs, batch_size, eta, lamb, loss_type, test_dataset):
-        l = len(train_dataset)
-        # Process test dataset if it is input
-        if test_dataset:
-            n = len(test_dataset)
+        l, n = len(train_dataset), len(test_dataset)
         # Initialize the loss lists
         loss_train, loss_valid = [], []
         accu_train, accu_valid = [], []
@@ -110,30 +107,26 @@ class DeepNet(object):
             # Run SGD algorithm in each sample of the partition
             for mini_batch in batches:
                 self.update_params(mini_batch, eta, loss_type)
-            loss_train.append(self.loss(train_dataset, lamb, loss_type ))
-            loss_valid.append(self.loss(test_dataset, lamb, loss_type, training_set=False))
+            loss_train.append(self.loss(train_dataset, lamb, loss_type))
+            loss_valid.append(self.loss(test_dataset, lamb, loss_type))
             accu_train.append(self.evaluate(train_dataset))
-            accu_valid.append(self.evaluate(test_dataset, training_set=False))
+            accu_valid.append(self.evaluate(test_dataset))
             print("Epoch #{}:\n\t\t>> Training:\n\t\t\tLoss = {}\tAccuracy = {} \
                              \n\t\t>> Evaluation:\n\t\t\tLoss = {}\tAccuracy = {} ..."
                   .format(k + 1, loss_train[-1], accu_train[-1], loss_valid[-1], accu_valid[-1]))
-
-        print("Training complete!")
         return (loss_train, loss_valid, accu_train, accu_valid)
     
     # Function computes the loss of a network
     # Input:  dataset, regulation factor lamb, boolean flag indicating 
     # if the dataset is a training/validation or testing dataset
     # Output: the loss value associated with that dataset
-    def loss(self, dataset, lamb, loss_type, training_set=True):
+    def loss(self, dataset, lamb, loss_type):
         l = len(dataset)
         loss = 0.5 * lamb * sum(lin.norm(W)**2 for W in self.Ws) / l
         for (x, y) in dataset:
-            if (not(training_set)):
-                y = vector_y(y)
             a = self.feedforward(x)
             if (loss_type == "CE"):
-                loss = np.sum(np.nan_to_num(-y * np.log(a)- (1 - y) * np.log(1 - a))) / l
+                loss = np.sum(np.nan_to_num(-y * np.log(a))- np.nan_to_num((1 - y) * np.log(1 - a))) / l
             else:
                 loss += 0.5 * lin.norm(y - a)**2 / l             
         return loss
@@ -144,10 +137,7 @@ class DeepNet(object):
     def evaluate(self, dataset, training_set=True):
         c = 0
         for (x, y) in dataset:
-            if (training_set):
-                i = np.argmax(y)
-            else:
-                i = y
+            i = np.argmax(y)
             c += (int)(np.argmax(self.feedforward(x)) == i)
         return c / len(dataset)
 
