@@ -1,7 +1,8 @@
+import os, random
 import pickle, gzip, urllib.request
 import numpy as np
-import random
-import os
+import tensorflow as tf
+from tensorflow import keras as kr
 
 file_path = "./"
 if os.getcwd()[-4:] != "data":
@@ -32,11 +33,32 @@ def wrap_data():
     train_dataset = zip(train_x, train_y)
     # Create validation dataset
     val_x = [ np.reshape(x, (784, 1)) for x in val_set[0] ]
-    val_dataset = zip(val_x, val_set[1])
+    val_y = [ vector_y(y) for y in val_set[1] ]
+    val_dataset = zip(val_x, val_y)
     # Create testing dataset
     test_x = [ np.reshape(x, (784, 1)) for x in test_set[0] ]
-    test_dataset = zip(test_x, test_set[1])
+    test_y = [ vector_y(y) for y in test_set[1] ]
+    test_dataset = zip(test_x, test_y)
     return (list(train_dataset), list(val_dataset), list(test_dataset))
+
+# Load and split Fashion-MNIST data in Keras library
+def load_split_dataset():
+    (train_images, train_labels), (test_images, test_labels) = kr.datasets.fashion_mnist.load_data()
+    # Create and shuffle training dataset for splitting
+    train_x = [ np.reshape(x, (784, 1)) for x in train_images ]
+    train_y = [ vector_y(y) for y in train_labels ]
+    train_dataset = zip(train_x, train_y)
+    train_dataset = list(train_dataset)
+    random.shuffle(train_dataset)
+    # Create validation dataset by splitting 1/6 training dataset ~ 10,000
+    val_dataset = train_dataset[ :10000 ]
+    # Create validation dataset by splitting 5/6 training dataset ~ 50,000
+    train_dataset = train_dataset[ 10000: ]
+    #  Create testing datasets 
+    test_x = [ np.reshape(x, (784, 1)) for x in test_images ]
+    test_y = [ vector_y(y) for y in test_labels ]
+    test_dataset = zip(test_x, test_y)
+    return (train_dataset, val_dataset, list(test_dataset))
 
 # Transform the raw datasets to csv format
 def trans_csv():
