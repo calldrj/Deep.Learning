@@ -137,8 +137,7 @@ class DeepNet(object):
     def evaluate(self, dataset, training_set=True):
         c = 0
         for (x, y) in dataset:
-            i = np.argmax(y)
-            c += (int)(np.argmax(self.feedforward(x)) == i)
+            c += (int)(np.argmax(self.feedforward(x)) == np.argmax(y))
         return c / len(dataset)
 
 # Function computes the sigmoid neutron
