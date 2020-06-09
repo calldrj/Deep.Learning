@@ -14,7 +14,7 @@ class DeepNet(object):
         # Populate Gaussian random on a list of bias vectors, each layer is represented by a vector b
         self.bs = [ np.random.randn(r, 1) for r in sizes[1:] ]
         # Populate Gaussian random on a list of weight matrices, each matrix is repesented by a matrix M
-        self.Ws = [ np.random.randn(r, c) for r, c in zip(sizes[1:], sizes[:-1]) ]
+        self.Ws = [ np.random.randn(r, c) / np.sqrt(c) for r, c in zip(sizes[1:], sizes[:-1]) ]
     
     # Function computes the output of the network, given an input:
         # Input:  an input array a of the first layer (size arbitrarily nx1)
