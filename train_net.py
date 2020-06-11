@@ -6,7 +6,7 @@ sys.path.append('./data')
 import data_loader as dl
 file_path = "./" if os.getcwd()[-4:] == "data" else "./data/"
 
-# Load datasets
+# Load proper datasets
 # training_data, validation_data, test_data = dl.wrap_data()
 training_data, validation_data, test_data = dl.load_split_dataset()
 # Create and configure a network
