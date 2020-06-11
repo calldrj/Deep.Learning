@@ -10,14 +10,14 @@ file_path = "./" if os.getcwd()[-4:] == "data" else "./data/"
 # training_data, validation_data, test_data = dl.wrap_data()
 training_data, validation_data, test_data = dl.load_split_dataset()
 # Create and configure a network
-net = neuron_net.DeepNet([784, 30, 10])
+net = neuron_net.DeepNet([784, 140, 70, 10])
 # Train the network with hyper-parameters
-num_epochs = 50
-batch_size = 10
-learning_rate = .005
-regulation_factor = .2
-train_size_ratio = 25
-training_data = training_data[ :len(training_data)//train_size_ratio ]
+num_epochs = 60
+batch_size = 160
+learning_rate = .01
+regulation_factor = .01
+train_size_ratio = 1.25
+training_data = training_data[ :(int)(len(training_data)/train_size_ratio) ]
 loss_types = [ "MS", "CE" ]
 loss_type = loss_types[1]
 loss_train, loss_validation, \
