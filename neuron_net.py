@@ -7,7 +7,7 @@ class DeepNet(object):
     # For example, net = neuron_net.DeepNet([784, 30, 10])
     # y = W * x + b
     def __init__(self, sizes):
-        np.random.seed(123)
+        random.seed(123)
         # Number of layers in the network
         self.num_layers = len(sizes)
         # Number of neuron in the network
@@ -123,13 +123,13 @@ class DeepNet(object):
     # Output: the loss value associated with that dataset
     def loss(self, dataset, lamb, loss_type):
         l = len(dataset)
-        loss = 0.5 * lamb * sum(lin.norm(W)**2 for W in self.Ws) / l
+        loss = 0.5 * lamb * sum(lin.norm(W**2) for W in self.Ws) / l
         for (x, y) in dataset:
             a = self.feedforward(x)
             if (loss_type == "CE"):
                 loss = np.sum(np.nan_to_num(-y * np.log(a))- np.nan_to_num((1 - y) * np.log(1 - a))) / l
             else:
-                loss += 0.5 * lin.norm(y - a)**2 / l             
+                loss += 0.5 * lin.norm((y - a)**2) / l             
         return loss
     
     # Function evaluate:
