@@ -7,6 +7,7 @@ class DeepNet(object):
     # For example, net = neuron_net.DeepNet([784, 30, 10])
     # y = W * x + b
     def __init__(self, sizes):
+        np.random.seed(123)
         # Number of layers in the network
         self.num_layers = len(sizes)
         # Number of neuron in the network
